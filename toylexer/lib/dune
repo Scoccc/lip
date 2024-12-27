@@ -1,0 +1,3 @@
+(library
+ (name toylexer))
+(ocamllex lexer)
