@@ -1,0 +1,4 @@
+(executable
+ (public_name toyparser)
+ (name main)
+ (libraries toyparser))
