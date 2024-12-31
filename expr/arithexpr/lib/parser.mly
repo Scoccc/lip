@@ -13,8 +13,12 @@ open Ast
 %token NOT
 %token AND
 %token OR
+%token ZERO
+%token SUCC
+%token PRED
+%token IS_ZERO
 
-%left OR AND
+%left OR AND SUCC PRED IS_ZERO
 %left NOT 
 
 %start <expr> prog
@@ -33,5 +37,9 @@ expr:
   | e1 = expr; AND; e2 = expr { And(e1,e2) }
   | e1 = expr; OR; e2 = expr { Or(e1,e2) }
   | NOT; e = expr { Not(e) }
+  | ZERO { Zero }
+  | PRED; e = expr { Pred (e) }
+  | SUCC; e = expr { Succ (e) }
+  | IS_ZERO; e = expr { IsZero(e) }
 ;
 
