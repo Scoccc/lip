@@ -24,25 +24,35 @@ let parse (s : string) : expr =
   ast
 ;;
 
-let is_nv = function
+let rec is_nv = function
 | Zero -> true
-| Succ _ -> true
-| Pred _ -> true
+| Succ e' -> is_nv e'
 | _ -> false
 
 
 exception NoRuleApplies
   
 let not x = if (x = true) then false else true ;;
-let notTracer (x : expr) = if (x = True) then False else True ;;
 
 let rec trace1 = function
     If(True,e1,_) -> e1
   | If(False,_,e2) -> e2
   | If(e0,e1,e2) -> let e0' = trace1 e0 in If(e0',e1,e2)
-  | Not(e) -> notTracer (e)
-  | And(e1,e2) -> if (e1 = True && e2 = True) then True else False
-  | Or(e1,e2) -> if (e1 = True || e2 = True) then True else False 
+  | Not(True) -> False
+  | Not(False) -> True
+  | Not(e) -> let e' = trace1 e in Not(e')
+  | And(True, e2) -> e2
+  | And(False, _) -> False
+  | And (e1, e2) -> let e1' = trace1 e1 in And(e1', e2)
+  | Or(True, _) -> True
+  | Or(False, e2) -> e2
+  | Or(e1, e2) -> let e1' = trace1 e1 in Or(e1', e2)
+  | Succ(e) -> let e' = trace1 e in Succ(e')
+  | Pred(Succ(nv)) when is_nv nv -> nv
+  | Pred(e) -> let e' = trace1 e in Pred(e')
+  | IsZero(Zero) -> True
+  | IsZero(Succ(e)) when is_nv e -> False
+  | IsZero(e) -> let e' = trace1 e in IsZero(e')
   | _ -> raise NoRuleApplies
 ;;
 
