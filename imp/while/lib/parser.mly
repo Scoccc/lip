@@ -26,9 +26,15 @@ open Ast
 %token RPAREN
 %token EOF
 
-%left OR AND ADD SUB
+%left OR
+%left AND
+%nonassoc NOT
+%left EQ LEQ
+%left ADD SUB
 %left MUL
-%left NOT 
+%left SEQ
+%nonassoc DO
+%nonassoc ELSE
 
 %start <cmd> prog
 
@@ -51,12 +57,13 @@ expr:
   | e1 = expr; MUL; e2 = expr { Mul(e1,e2) }
   | e1 = expr; EQ; e2 = expr { Eq(e1,e2) }
   | e1 = expr; LEQ; e2 = expr { Leq(e1,e2) }
+  | LPAREN; e = expr; RPAREN { e }
 ;
 
 cmd:
  | SKIP { Skip }
  | v = VAR; ASSIGN; e = expr { Assign(v, e) }
- | c1 = cmd; SEQ; c2 = cmd {Seq(c1,c2) }
+ | c1 = cmd; SEQ; c2 = cmd { Seq(c1,c2) }
  | IF; e = expr; THEN; c1 = cmd; ELSE; c2 = cmd { If(e,c1,c2) }
  | WHILE; e = expr; DO; c = cmd { While(e,c) }
  | LPAREN; c = cmd; RPAREN { c }

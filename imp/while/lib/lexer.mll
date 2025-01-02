@@ -2,8 +2,8 @@
 open Parser
 }
 
-let white = [' ' '\t' '\n']+
-let id = ['A'-'Z' 'a'-'z']['A'-'Z' 'a'-'z' '_' '-']*
+let white = [' ' '\t' '\n' '\r']+
+let id = ['A'-'Z' 'a'-'z']['A'-'Z' 'a'-'z' '_']*
 let num = ['0'-'9']|['1'-'9']['0'-'9']*
 
 rule read =
@@ -11,8 +11,6 @@ rule read =
   | white { read lexbuf }  
   | "true" { TRUE }
   | "false" { FALSE }
-  | id { VAR(Lexing.lexeme lexbuf) }
-  | num { CONST(Lexing.lexeme lexbuf) }
   | "not" { NOT }
   | "and" { AND }
   | "or" { OR }
@@ -31,4 +29,6 @@ rule read =
   | "do" { DO }
   | "(" { LPAREN }
   | ")" { RPAREN }
+  | id { VAR(Lexing.lexeme lexbuf) }
+  | num { CONST(Lexing.lexeme lexbuf) }
   | eof { EOF }
