@@ -15,8 +15,7 @@ let rec eval_expr (st : state) (e : expr) : memval =
     let env = topenv st in
     (match env x with
     | IVar loc -> getmem st loc
-    | BVar loc -> getmem st loc
-    | exception UnboundVar _ -> raise (TypeError ("Unbound variable: " ^ x)))
+    | BVar loc -> getmem st loc)
   | Const n -> Int n
   | Not e1 -> (
       match eval_expr st e1 with
