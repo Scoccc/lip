@@ -67,7 +67,7 @@ decl:
   | BOOLEAN; v = IDE; SEQ { BoolVar(v) }
 
 decls:
- | d = decl { [d] }
+ | { [] }
  | ds = decls; d = decl { d :: ds }
 
 cmd:
