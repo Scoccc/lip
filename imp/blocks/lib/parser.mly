@@ -30,12 +30,12 @@ open Ast
 %token BOOLEAN
 %token EOF
 
+%left SEQ
 %left OR AND
 %nonassoc NOT
 %left EQ LEQ
 %left ADD SUB
 %left MUL
-%left SEQ
 %nonassoc DO ELSE
 
 %start <cmd> prog
