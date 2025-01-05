@@ -63,12 +63,12 @@ expr:
 ;
 
 decl:
-  | INTEGER; v = IDE; SEQ { IntVar(v) }
-  | BOOLEAN; v = IDE; SEQ { BoolVar(v) }
+  | INTEGER; v = IDE { IntVar(v) }
+  | BOOLEAN; v = IDE { BoolVar(v) }
 
 decls:
  | { [] }
- | d = decl; ds = decls { d :: ds }
+ | d = decl; SEQ; ds = decls { d :: ds }
 
 cmd:
  | SKIP { Skip }

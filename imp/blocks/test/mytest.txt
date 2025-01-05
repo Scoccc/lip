@@ -1,1 +1,1 @@
-{int x; skip}
+{int x; int y; bool z; z:=false; if z then y:= 99 else x:= 99}
