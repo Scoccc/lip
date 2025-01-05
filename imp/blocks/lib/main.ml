@@ -7,15 +7,17 @@ let parse (s : string) : cmd =
   ast
 ;;
 
+
+let apply st x =
+  match topenv st x with
+  | IVar l 
+  | BVar l -> getmem st l
+
 let rec eval_expr (st : state) (e : expr) : memval =
   match e with
   | True -> Bool true
   | False -> Bool false
-  | Var x -> 
-    let env = topenv st in
-    (match env x with
-    | IVar loc -> getmem st loc
-    | BVar loc -> getmem st loc)
+  | Var x -> apply st x
   | Const n -> Int n
   | Not e1 -> (
       match eval_expr st e1 with
@@ -59,21 +61,19 @@ let rec eval_expr (st : state) (e : expr) : memval =
     )
 ;;
 
-let eval_decl (st : state) (dls : decl list) : state =
-  List.fold_left
-    (fun st decl ->
-      match decl with
-      | IntVar v ->
-          let loc = getloc st in
-          let memory = bind_mem (getmem st) loc (Int 0) in
-          let env = bind_env (topenv st) v (IVar loc) in
-          setenv (setmem (setloc st (loc + 1)) memory) (env :: getenv st)
-      | BoolVar v ->
-          let loc = getloc st in
-          let memory = bind_mem (getmem st) loc (Bool false) in
-          let env = bind_env (topenv st) v (BVar loc) in
-          setenv (setmem (setloc st (loc + 1)) memory) (env :: getenv st))
-    st dls
+let rec eval_decl (st : state) (dls : decl list) : state =
+  match dls with
+  | [] -> st
+  | IntVar(x)::dls' ->
+      let loc = getloc st in
+      let env = bind_env (topenv st) x (IVar loc) in
+      let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
+      eval_decl st' dls'
+  | BoolVar(x)::dls' ->
+      let loc = getloc st in
+      let env = bind_env (topenv st) x (BVar loc) in
+      let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
+      eval_decl st' dls'
 ;;
 
 let rec trace1 (c : conf) : conf =
@@ -81,12 +81,22 @@ let rec trace1 (c : conf) : conf =
   | St _ -> raise NoRuleApplies
   | Cmd (Skip, st) -> St st
   | Cmd (Assign (x, e), st) -> 
-      let v = eval_expr st e in
-      let loc = getloc st in
-      let memory = bind_mem (getmem st) loc v in
-      let env = topenv st in
-      let env' = bind_env env x (IVar loc) in
-      St (setenv (setmem st memory) (env' :: getenv st))  (* Aggiorno l'ambiente e la memoria *)
+  (
+    match eval_expr st e with
+    | Bool v -> 
+      (
+        match topenv st x with 
+        | BVar l -> St (setmem st(bind_mem (getmem st) l (Bool v)))
+        | _ -> failwith "Cannot assign Int to Bool"
+      )
+      | Int v -> 
+        (
+          match topenv st x with 
+          | IVar l -> St (setmem st(bind_mem (getmem st) l (Int v)))
+          | _ -> failwith "Cannot assign Bool to int"
+        )
+    
+  )
   | Cmd (Seq (c1, c2), st) -> 
       (
         match trace1 (Cmd (c1, st)) with
@@ -107,8 +117,17 @@ let rec trace1 (c : conf) : conf =
         | Bool false -> St st
         | _ -> failwith "Type error: While condition must be boolean"
       )
-  | Cmd (Decl(_, _), _) -> failwith "TODO"
-  | Cmd (Block(_), _) -> failwith "TODO"
+  | Cmd (Decl (dls, c), st) ->
+    (
+      let st' = eval_decl st dls in
+      Cmd(Block(c), st')
+    )
+  | Cmd (Block c, st) -> 
+    (
+      match trace1 (Cmd (c, st)) with
+      | St st' -> St (setenv st' (popenv st'))
+      | Cmd (c', st') -> Cmd (Block c', st')
+    )
 
 let rec trace (n : int) (c : cmd) : conf list =
   if n <= 0 then 

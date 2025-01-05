@@ -68,7 +68,7 @@ decl:
 
 decls:
  | { [] }
- | ds = decls; d = decl { d :: ds }
+ | d = decl; ds = decls { d :: ds }
 
 cmd:
  | SKIP { Skip }
