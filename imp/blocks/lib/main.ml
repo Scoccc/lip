@@ -7,17 +7,16 @@ let parse (s : string) : cmd =
   ast
 ;;
 
-
-let apply st x =
-  match topenv st x with
-  | IVar l -> getmem st l
-  | BVar l -> getmem st l
-
 let rec eval_expr (st : state) (e : expr) : memval =
   match e with
   | True -> Bool true
   | False -> Bool false
-  | Var x -> apply st x
+  | Var x -> 
+    (
+      match topenv st x with
+      | IVar l -> getmem st l
+      | BVar l -> getmem st l
+    )
   | Const n -> Int n
   | Not e1 -> 
     (
@@ -73,15 +72,19 @@ let rec eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
   | IntVar(x)::dls' ->
+    (
       let loc = getloc st in
       let env = bind_env (topenv st) x (IVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
-      eval_decl st' dls'
+      eval_decl popenv st' dls'
+    )
   | BoolVar(x)::dls' ->
+    (
       let loc = getloc st in
       let env = bind_env (topenv st) x (BVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
       eval_decl st' dls'
+    )
 ;;
 
 let rec trace1 (c : conf) : conf =
@@ -124,10 +127,7 @@ let rec trace1 (c : conf) : conf =
         | Bool false -> St st
         | _ -> failwith "Type error: While condition must be boolean"
       )
-  | Cmd (Decl (dls, c), st) ->
-    (
-      Cmd (c, eval_decl st dls)
-    )
+  | Cmd (Decl (dls, c), st) -> Cmd (Block c, eval_decl st dls)
   | Cmd (Block c, st) -> 
   (
     match trace1 (Cmd(c, st)) with

@@ -67,15 +67,14 @@ decl:
   | BOOLEAN; v = IDE { BoolVar(v) }
 
 decls:
- | { [] }
  | d = decl; SEQ; ds = decls { d :: ds }
+ | { [] }
 
 cmd:
  | SKIP { Skip }
  | v = IDE; ASSIGN; e = expr { Assign(v, e) }
  | c1 = cmd; SEQ; c2 = cmd { Seq(c1,c2) }
  | IF; e = expr; THEN; c1 = cmd; ELSE; c2 = cmd { If(e,c1,c2) }
- | WHILE; e = expr; DO; c = cmd { While(e,c) }
+ | WHILE; e = expr; DO; c = cmd; { While(e,c) }
  | LBLOCKPAREN; ds = decls; c = cmd; RBLOCKPAREN {Decl(ds, c)}
- | LPAREN; c = cmd; RPAREN { c }
 
