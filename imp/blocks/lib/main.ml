@@ -10,7 +10,7 @@ let parse (s : string) : cmd =
 
 let apply st x =
   match topenv st x with
-  | IVar l 
+  | IVar l -> getmem st l
   | BVar l -> getmem st l
 
 let rec eval_expr (st : state) (e : expr) : memval =
@@ -130,9 +130,9 @@ let rec trace1 (c : conf) : conf =
     )
   | Cmd (Block c, st) -> 
   (
-    match trace1 (Cmd (c, st)) with
-    | St st' -> St (setenv st' (popenv st))
-    | Cmd (c', st') -> Cmd (Block c', st')
+    match trace1 (Cmd(c, st)) with
+    | St st' -> St(setenv st'(popenv st))
+    | Cmd(c',st') -> Cmd(Block c', st')
   )
   ;;
 

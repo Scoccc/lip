@@ -1,1 +1,1 @@
-{int x; int y; bool z; z:=false; if z then y:= 99 else x:= 99}
+{ int x; x:=2; { int x; x:=100 }; { x:=x+1 } }
