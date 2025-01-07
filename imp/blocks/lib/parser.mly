@@ -31,12 +31,13 @@ open Ast
 %token EOF
 
 %left SEQ
+%nonassoc ELSE DO
 %left OR AND
 %nonassoc NOT
 %left EQ LEQ
 %left ADD SUB
 %left MUL
-%nonassoc DO ELSE
+
 
 %start <cmd> prog
 
@@ -62,14 +63,6 @@ expr:
   | LPAREN; e = expr; RPAREN { e }
 ;
 
-decl:
-  | INTEGER; v = IDE { IntVar(v) }
-  | BOOLEAN; v = IDE { BoolVar(v) }
-
-decls:
- | d = decl; SEQ; ds = decls { d :: ds }
- | { [] }
-
 cmd:
  | SKIP { Skip }
  | v = IDE; ASSIGN; e = expr { Assign(v, e) }
@@ -77,4 +70,12 @@ cmd:
  | IF; e = expr; THEN; c1 = cmd; ELSE; c2 = cmd { If(e,c1,c2) }
  | WHILE; e = expr; DO; c = cmd; { While(e,c) }
  | LBLOCKPAREN; ds = decls; c = cmd; RBLOCKPAREN {Decl(ds, c)}
+
+ decl:
+  | INTEGER; v = IDE { IntVar(v) }
+  | BOOLEAN; v = IDE { BoolVar(v) }
+
+decls:
+ | d = decl; SEQ; ds = decls { d :: ds }
+ | { [] }
 

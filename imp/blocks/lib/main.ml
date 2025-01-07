@@ -7,16 +7,17 @@ let parse (s : string) : cmd =
   ast
 ;;
 
+
+let apply st x =
+  match topenv st x with
+  | IVar l -> getmem st l
+  | BVar l -> getmem st l
+
 let rec eval_expr (st : state) (e : expr) : memval =
   match e with
   | True -> Bool true
   | False -> Bool false
-  | Var x -> 
-    (
-      match topenv st x with
-      | IVar l -> getmem st l
-      | BVar l -> getmem st l
-    )
+  | Var x -> apply st x
   | Const n -> Int n
   | Not e1 -> 
     (
@@ -72,20 +73,16 @@ let rec eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
   | IntVar(x)::dls' ->
-    (
       let loc = getloc st in
       let env = bind_env (topenv st) x (IVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
-      eval_decl popenv st' dls'
-    )
+      eval_decl st' dls'
   | BoolVar(x)::dls' ->
-    (
       let loc = getloc st in
       let env = bind_env (topenv st) x (BVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
       eval_decl st' dls'
-    )
-;;
+  ;;
 
 let rec trace1 (c : conf) : conf =
   match c with
@@ -95,38 +92,39 @@ let rec trace1 (c : conf) : conf =
   (
     match eval_expr st e with
     | Bool v -> 
-      (
-        match topenv st x with 
-        | BVar l -> St (setmem st(bind_mem (getmem st) l (Bool v)))
-        | _ -> failwith "Cannot assign Bool to Int var"
-      )
-      | Int v -> 
-        (
-          match topenv st x with 
-          | IVar l -> St (setmem st(bind_mem (getmem st) l (Int v)))
-          | _ -> failwith "Cannot assign Int to Bool var"
-        )
+    (
+      match topenv st x with 
+      | BVar l -> St (setmem st(bind_mem (getmem st) l (Bool v)))
+      | _ -> failwith "Cannot assign Bool to Int var"
+    )
+    | Int v -> 
+    (
+      match topenv st x with 
+      | IVar l -> St (setmem st(bind_mem (getmem st) l (Int v)))
+      | _ -> failwith "Cannot assign Int to Bool var"
+    )
   )
   | Cmd (Seq (c1, c2), st) -> 
-      (
-        match trace1 (Cmd (c1, st)) with
-        | St st' -> Cmd (c2, st')
-        | Cmd (c1', st') -> Cmd (Seq (c1', c2), st')
-      )
+    (
+      match trace1 (Cmd (c1, st)) with
+      | St st' -> Cmd (c2, st')
+      | Cmd (c1', st') -> Cmd (Seq (c1', c2), st')
+    )
   | Cmd (If (e, c1, c2), st) -> 
-      (
-        match eval_expr st e with
-        | Bool true -> Cmd (c1, st)
-        | Bool false -> Cmd (c2, st)
-        | _ -> failwith "Type error: If condition must be boolean"
-      )
+    (
+      match eval_expr st e with
+      | Bool true -> Cmd (c1, st)
+      | Bool false -> Cmd (c2, st)
+      | _ -> failwith "Type error: If condition must be boolean"
+    )
   | Cmd (While (e, c), st) -> 
-      (
-        match eval_expr st e with
-        | Bool true -> Cmd (Seq (c, While (e, c)), st)
-        | Bool false -> St st
-        | _ -> failwith "Type error: While condition must be boolean"
-      )
+    (
+      match eval_expr st e with
+      | Bool true -> Cmd (Seq (c, While (e, c)), st)
+      | Bool false -> St st
+      | _ -> failwith "Type error: While condition must be boolean"
+    )
+  | Cmd (Decl ([], c), st) -> Cmd (c, st)
   | Cmd (Decl (dls, c), st) -> Cmd (Block c, eval_decl st dls)
   | Cmd (Block c, st) -> 
   (
@@ -136,16 +134,14 @@ let rec trace1 (c : conf) : conf =
   )
   ;;
 
-let rec trace_rec n t =
-  if n <= 0 then 
-    [t]
-  else
-    try 
-      let t' = trace1 t in
-      t :: (trace_rec (n-1) t')
-    with NoRuleApplies -> [t]
-  ;;
-
-let trace (n : int) (c : cmd) : conf list = trace_rec n (Cmd(c, make_state [bottom_env] bottom_mem 0))
+let trace (n : int) (c : cmd) : conf list = 
+  let conf0 = Cmd (c, state0) in
+  let rec helper i conf =
+    if i >= n then [ conf ]
+    else
+      try conf :: helper (i + 1) (trace1 conf)
+      with NoRuleApplies -> [ conf ]
+  in
+  helper 0 conf0
 ;;
   

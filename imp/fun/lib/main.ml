@@ -82,7 +82,8 @@ let rec eval_decl (st : state) (dls : decl list) : state =
       let env = bind_env (topenv st) x (BVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
       eval_decl st' dls'
-;;
+  ;;
+
 
 let rec trace1 (c : conf) : conf =
   match c with
@@ -92,41 +93,41 @@ let rec trace1 (c : conf) : conf =
   (
     match eval_expr st e with
     | Bool v -> 
-      (
-        match topenv st x with 
-        | BVar l -> St (setmem st(bind_mem (getmem st) l (Bool v)))
-        | _ -> failwith "Cannot assign Bool to Int var"
-      )
-      | Int v -> 
-        (
-          match topenv st x with 
-          | IVar l -> St (setmem st(bind_mem (getmem st) l (Int v)))
-          | _ -> failwith "Cannot assign Int to Bool var"
-        )
+    (
+      match topenv st x with 
+      | BVar l -> St (setmem st(bind_mem (getmem st) l (Bool v)))
+      | _ -> failwith "Cannot assign Bool to Int var"
+    )
+    | Int v -> 
+    (
+      match topenv st x with 
+      | IVar l -> St (setmem st(bind_mem (getmem st) l (Int v)))
+      | _ -> failwith "Cannot assign Int to Bool var"
+    )
   )
   | Cmd (Seq (c1, c2), st) -> 
-      (
-        match trace1 (Cmd (c1, st)) with
-        | St st' -> Cmd (c2, st')
-        | Cmd (c1', st') -> Cmd (Seq (c1', c2), st')
-      )
+  (
+    match trace1 (Cmd (c1, st)) with
+    | St st' -> Cmd (c2, st')
+    | Cmd (c1', st') -> Cmd (Seq (c1', c2), st')
+  )
   | Cmd (If (e, c1, c2), st) -> 
-      (
-        match eval_expr st e with
-        | Bool true -> Cmd (c1, st)
-        | Bool false -> Cmd (c2, st)
-        | _ -> failwith "Type error: If condition must be boolean"
-      )
+  (
+    match eval_expr st e with
+    | Bool true -> Cmd (c1, st)
+    | Bool false -> Cmd (c2, st)
+    | _ -> failwith "Type error: If condition must be boolean"
+  )
   | Cmd (While (e, c), st) -> 
-      (
-        match eval_expr st e with
-        | Bool true -> Cmd (Seq (c, While (e, c)), st)
-        | Bool false -> St st
-        | _ -> failwith "Type error: While condition must be boolean"
-      )
+  (
+    match eval_expr st e with
+    | Bool true -> Cmd (Seq (c, While (e, c)), st)
+    | Bool false -> St st
+    | _ -> failwith "Type error: While condition must be boolean"
+  )
   | Cmd (Decl (dls, c), st) ->
     (
-      Cmd (c, eval_decl st dls)
+      Cmd (Block c, eval_decl st dls)
     )
   | Cmd (Block c, st) -> 
   (
