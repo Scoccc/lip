@@ -11,12 +11,7 @@ let rec eval_expr (st : state) (e : expr) : memval =
   match e with
   | True -> 1
   | False -> 0
-  | Var x -> 
-    (
-      match topenv st x with
-      | IVar l -> getmem st l
-      | IFun _ -> failwith "TODO"
-    )
+  | Var x -> apply st x
   | Const n -> n
   | Not e1 -> 
     (
@@ -88,15 +83,17 @@ let rec trace1 (c : conf) : conf =
     )
   ;;
 
-let trace (n : int) (p : prog) : conf list = 
-  let c = match p with Prog(_, c) -> c in
-  let conf0 = Cmd (c, state0) in
-  let rec helper i conf =
-    if i >= n then [ conf ]
-    else
-      try conf :: helper (i + 1) (trace1 conf)
-      with NoRuleApplies -> [ conf ]
-  in
-  helper 0 conf0
-;;
+  let trace (n : int) (p : prog) : conf list = 
+    let (dls, c) = match p with Prog(dls, c) -> (dls, c) in
+    let st = eval_decl state0 dls in
+    let conf0 = Cmd (c, st) in
+    let rec helper i conf =
+      if i >= n then [ conf ]
+      else
+        try conf :: helper (i + 1) (trace1 conf)
+        with NoRuleApplies -> [ conf ]
+    in
+    helper 0 conf0
+  ;;
+  
   
