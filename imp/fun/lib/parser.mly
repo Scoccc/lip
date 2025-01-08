@@ -40,12 +40,11 @@ open Ast
 %left MUL
 %nonassoc DO ELSE
 
-%start <cmd> prog
-
+%start <prog> prog
 %%
 
 prog:
-  | c = cmd; EOF { c }
+  | dls = decls; c = cmd; EOF { Prog(dls, c) }
 ;
 
 expr:
@@ -65,21 +64,19 @@ expr:
   | LPAREN; e = expr; RPAREN { e }
 ;
 
-decl:
-  | INTEGER; v = IDE { IntVar(v) }
-  | BOOLEAN; v = IDE { BoolVar(v) }
-  | FUNCTION; name = IDE; param = IDE; LBLOCKPAREN; body = cmd; RETURN; ret = expr; RBLOCKPAREN {Fun(name, param, body, ret)}
-
-decls:
- | { [] }
- | d = decl; SEQ; ds = decls { d :: ds }
-
 cmd:
  | SKIP { Skip }
  | v = IDE; ASSIGN; e = expr { Assign(v, e) }
  | c1 = cmd; SEQ; c2 = cmd { Seq(c1,c2) }
  | IF; e = expr; THEN; c1 = cmd; ELSE; c2 = cmd { If(e,c1,c2) }
  | WHILE; e = expr; DO; c = cmd { While(e,c) }
- | LBLOCKPAREN; ds = decls; c = cmd; RBLOCKPAREN {Decl(ds, c)}
- | LPAREN; c = cmd; RPAREN { c }
+
+ decl:
+  | INTEGER; v = IDE
+  | BOOLEAN; v = IDE { IntVar(v) }
+  | FUNCTION; name = IDE; LPAREN; param = IDE; RPAREN; LBLOCKPAREN; body = cmd; SEQ; RETURN; ret = expr; RBLOCKPAREN {Fun(name, param, body, ret)}
+
+decls:
+ | { [] }
+ | d = decl; SEQ; ds = decls { d :: ds }
 
