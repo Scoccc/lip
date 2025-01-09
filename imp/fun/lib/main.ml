@@ -36,21 +36,20 @@ let rec eval_expr (st : state) (e : expr) : memval =
       | n1, n2 when n1 <= n2 -> 1
       | _ -> 0
     )
-  | Call (_, _) ->
-    (
-      failwith "TODO"
-    )
-  | CallExec (_, _) ->
-    (
-      failwith "TODO"
-    )
-  | CallRet _ ->
-    (
-      failwith "TODO"
-    ) 
-;;
+    | Call (name, arg) ->
+      (
+        let par, body, ret = apply_fun st name in
+        let arg_val = eval_expr st arg in
+        let cmd = exec_cmd body st in
+        CallExec(cmd, ret)
+      ) 
+    | CallExec (cmd, ret) ->
+      (
+        CallRet ret
+      ) 
+    | CallRet ret -> eval_expr st ret
 
-let rec eval_decl (st : state) (dls : decl list) : state =
+and eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
   | IntVar(x)::dls' ->
