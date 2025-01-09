@@ -36,64 +36,83 @@ let rec eval_expr (st : state) (e : expr) : memval =
       | n1, n2 when n1 <= n2 -> 1
       | _ -> 0
     )
-  | Call (_,_) -> failwith "TODO"
-  | CallExec (_,_) -> failwith "TODO"
-  | CallRet _ -> failwith "TODO"
+  | Call (_, _) ->
+    (
+      failwith "TODO"
+    )
+  | CallExec (_, _) ->
+    (
+      failwith "TODO"
+    )
+  | CallRet _ ->
+    (
+      failwith "TODO"
+    ) 
 ;;
 
 let rec eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
   | IntVar(x)::dls' ->
+    (
       let loc = getloc st in
       let env = bind_env (topenv st) x (IVar loc) in
       let st' = setenv (setloc st (loc + 1)) (env :: getenv st) in
       eval_decl st' dls'
-  | Fun(_,_,_,_)::_ -> failwith "TODO"
-  ;;
+    )
+  | Fun (n, p, b, r) :: dls' ->
+    (
+      let env = bind_env (topenv st) n (IFun (p, b, r)) in
+      eval_decl (setenv st (env :: getenv st)) dls'
+    )
 
-let rec trace1 (c : conf) : conf =
+and exec_cmd (st : state) (c : cmd) : state = 
+    match c with
+    | Skip -> st
+    | Assign (x, e) -> 
+      (
+        let v = eval_expr st e in
+        match topenv st x with 
+        | IVar l -> setmem st (bind_mem (getmem st) l v)
+        | IFun (_,_,_) -> failwith "Cannot assigned a function"
+      )
+    | Seq (c1, c2) -> 
+      (
+        let st' = exec_cmd st c1 in
+        exec_cmd st' c2
+      )
+    | If (e, c1, c2) -> 
+      (
+        match eval_expr st e with
+        | 0 -> exec_cmd st c2
+        | _ -> exec_cmd st c1
+      )
+    | While (e, body) -> 
+      (
+        match eval_expr st e with
+        | 0 -> st
+        | _ -> exec_cmd (exec_cmd st body) c
+      )
+
+and trace1 (c : conf) : conf =
   match c with
   | St _ -> raise NoRuleApplies
-  | Cmd (Skip, st) -> St st
-  | Cmd (Assign (x, e), st) -> 
-    (
-      let v = eval_expr st e in
-      match topenv st x with 
-      | IVar l -> St (setmem st(bind_mem (getmem st) l v))
-      | _ -> failwith "TODO"   
-    )
-  | Cmd (Seq (c1, c2), st) -> 
-    (
-      match trace1 (Cmd (c1, st)) with
-      | St st' -> Cmd (c2, st')
-      | Cmd (c1', st') -> Cmd (Seq (c1', c2), st')
-    )
-  | Cmd (If (e, c1, c2), st) -> 
-    (
-      match eval_expr st e with
-      | 0 -> Cmd (c2, st)
-      | _ -> Cmd (c1, st)
-    )
-  | Cmd (While (e, c), st) -> 
-    (
-      match eval_expr st e with
-      | 0 -> St st
-      | _ -> Cmd (Seq (c, While (e, c)), st)
-    )
-  ;;
+  | Cmd (c, st) -> 
+    let st' = exec_cmd st c in
+    St st'
+;;
 
-  let trace (n : int) (p : prog) : conf list = 
-    let (dls, c) = match p with Prog(dls, c) -> (dls, c) in
-    let st = eval_decl state0 dls in
-    let conf0 = Cmd (c, st) in
-    let rec helper i conf =
-      if i >= n then [ conf ]
-      else
-        try conf :: helper (i + 1) (trace1 conf)
-        with NoRuleApplies -> [ conf ]
-    in
-    helper 0 conf0
-  ;;
-  
+let trace (n : int) (p : prog) : conf list = 
+  let (dls, c) = match p with Prog(dls, c) -> (dls, c) in
+  let st = eval_decl state0 dls in
+  let conf0 = Cmd (c, st) in
+  let rec helper i conf =
+    if i >= n then [ conf ]
+    else
+      try conf :: helper (i + 1) (trace1 conf)
+      with NoRuleApplies -> [ conf ]
+  in
+  helper 0 conf0
+;;
+
   

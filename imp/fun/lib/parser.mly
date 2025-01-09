@@ -70,6 +70,7 @@ cmd:
  | c1 = cmd; SEQ; c2 = cmd { Seq(c1,c2) }
  | IF; e = expr; THEN; c1 = cmd; ELSE; c2 = cmd { If(e,c1,c2) }
  | WHILE; e = expr; DO; c = cmd { While(e,c) }
+ | LBLOCKPAREN; c = cmd; RBLOCKPAREN { c }
 
  decl:
   | INTEGER; v = IDE
