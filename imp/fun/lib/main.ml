@@ -39,7 +39,11 @@ let rec eval_expr (st : state) (e : expr) : memval =
     | Call (name, arg) ->
       (
         let par, body, ret = apply_fun st name in
-        let st' = exec_cmd st (Assign(par, arg)) in
+        let loc = getloc st in
+        let arg_val = eval_expr st arg in
+        let env = bind_env (topenv st) par (IVar loc) in
+        let mem = bind_mem (getmem st) loc arg_val in
+        let st' = setmem (setenv (setloc st (loc + 1)) (pushenv st env)) mem in
         eval_expr st' (CallExec(body, ret))
       ) 
     | CallExec (cmd, ret) ->
@@ -47,8 +51,10 @@ let rec eval_expr (st : state) (e : expr) : memval =
         let st' = exec_cmd st cmd in
         eval_expr st' (CallRet ret)
       ) 
-    | CallRet ret -> eval_expr st ret
-
+    | CallRet ret -> 
+      (
+       eval_expr st ret
+      )
 and eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
@@ -73,7 +79,7 @@ and exec_cmd (st : state) (c : cmd) : state =
         let v = eval_expr st e in
         match topenv st x with 
         | IVar l -> setmem st (bind_mem (getmem st) l v)
-        | IFun (_,_,_) -> failwith "Cannot assigned a function"
+        | IFun _ -> failwith "Cannot assigned a function"
       )
     | Seq (c1, c2) -> 
       (
