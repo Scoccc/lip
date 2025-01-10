@@ -39,13 +39,13 @@ let rec eval_expr (st : state) (e : expr) : memval =
     | Call (name, arg) ->
       (
         let par, body, ret = apply_fun st name in
-        let arg_val = eval_expr st arg in
-        let cmd = exec_cmd body st in
-        CallExec(cmd, ret)
+        let st' = exec_cmd st (Assign(par, arg)) in
+        eval_expr st' (CallExec(body, ret))
       ) 
     | CallExec (cmd, ret) ->
       (
-        CallRet ret
+        let st' = exec_cmd st cmd in
+        eval_expr st' (CallRet ret)
       ) 
     | CallRet ret -> eval_expr st ret
 
