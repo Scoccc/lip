@@ -36,25 +36,23 @@ let rec eval_expr (st : state) (e : expr) : memval =
       | n1, n2 when n1 <= n2 -> 1
       | _ -> 0
     )
-    | Call (name, arg) ->
-      (
-        let par, body, ret = apply_fun st name in
-        let loc = getloc st in
-        let arg_val = eval_expr st arg in
-        let env = bind_env (topenv st) par (IVar loc) in
-        let mem = bind_mem (getmem st) loc arg_val in
-        let st' = setmem (setenv (setloc st (loc + 1)) (pushenv st env)) mem in
-        eval_expr st' (CallExec(body, ret))
-      ) 
-    | CallExec (cmd, ret) ->
-      (
-        let st' = exec_cmd st cmd in
-        eval_expr st' (CallRet ret)
-      ) 
-    | CallRet ret -> 
-      (
-       eval_expr st ret
-      )
+  | Call (name, arg) ->
+    (
+      let par, body, ret = apply_fun st name in
+      let loc = getloc st in
+      let arg_val = eval_expr st arg in
+      let env = bind_env (topenv st) par (IVar loc) in
+      let mem = bind_mem (getmem st) loc arg_val in
+      let st' = setmem (setenv (setloc st (loc + 1)) (pushenv st env)) mem in
+      eval_expr st' (CallExec(body, ret))
+    )
+  | CallExec (c, ret) ->
+    (
+      match trace1 (Cmd(c, st)) with
+      | St st' -> eval_expr st' (CallRet(ret))
+      | Cmd(c', st') -> eval_expr st' (CallExec(c', ret))
+    )
+  | CallRet ret -> eval_expr st ret
 and eval_decl (st : state) (dls : decl list) : state =
   match dls with
   | [] -> st
@@ -70,41 +68,33 @@ and eval_decl (st : state) (dls : decl list) : state =
       let env = bind_env (topenv st) n (IFun (p, b, r)) in
       eval_decl (setenv st (env :: getenv st)) dls'
     )
-
-and exec_cmd (st : state) (c : cmd) : state = 
-    match c with
-    | Skip -> st
-    | Assign (x, e) -> 
-      (
-        let v = eval_expr st e in
-        match topenv st x with 
-        | IVar l -> setmem st (bind_mem (getmem st) l v)
-        | IFun _ -> failwith "Cannot assigned a function"
-      )
-    | Seq (c1, c2) -> 
-      (
-        let st' = exec_cmd st c1 in
-        exec_cmd st' c2
-      )
-    | If (e, c1, c2) -> 
-      (
-        match eval_expr st e with
-        | 0 -> exec_cmd st c2
-        | _ -> exec_cmd st c1
-      )
-    | While (e, body) -> 
-      (
-        match eval_expr st e with
-        | 0 -> st
-        | _ -> exec_cmd (exec_cmd st body) c
-      )
-
 and trace1 (c : conf) : conf =
   match c with
   | St _ -> raise NoRuleApplies
   | Cmd (c, st) -> 
-    let st' = exec_cmd st c in
-    St st'
+    (
+      match c with 
+      | Skip -> St st
+      | Assign (x, e) -> St(bind_ivar st x (eval_expr st e))
+      | Seq( c1, c2) ->
+        (
+          match trace1 (Cmd(c1, st)) with
+          | St st' -> Cmd(c2, st')
+          | Cmd (c', st') -> Cmd(Seq(c', c2), st')
+        )
+      | If (e, c1, c2) -> 
+        (
+          match eval_expr st e with
+          | 0 -> Cmd(c1, st)
+          | _ -> Cmd(c2, st)
+        )
+      | While (e, b) ->
+        (
+          match eval_expr st e with
+          | 0 -> St st
+          | _ -> Cmd(Seq(b, While(e, b)), st)
+        )
+    )
 ;;
 
 let trace (n : int) (p : prog) : conf list = 
