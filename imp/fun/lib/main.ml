@@ -85,8 +85,8 @@ and trace1 (c : conf) : conf =
       | If (e, c1, c2) -> 
         (
           match eval_expr st e with
-          | 0 -> Cmd(c1, st)
-          | _ -> Cmd(c2, st)
+          | 0 -> Cmd(c2, st)
+          | _ -> Cmd(c1, st)
         )
       | While (e, b) ->
         (
